@@ -77,13 +77,19 @@ export async function login(username: string, password: string): Promise<Result<
     }
 }
 
-export async function refreshAccessToken(userId: string): Promise<Result<string>> {
+export async function refresh(token: string | undefined): Promise<Result<TokenPair>> {
+    if (!token) return ResultFactory.failure("No Refresh Token")
     try {
+        const result = jwt.verify(
+            token,
+            JWT_SECRET2
+        ) as {id: string};
+        
         const res = await pool.query(
             `SELECT id, username
              FROM users
              WHERE id = $1`,
-            [userId]
+            [result.id]
         );
 
         const user = res.rows[0];
@@ -92,12 +98,15 @@ export async function refreshAccessToken(userId: string): Promise<Result<string>
             return ResultFactory.failure("User not found");
         }
 
-        const accessToken = createAccessToken({
+        const payload: User = {
             id: user.id,
             username: user.username
-        });
+        };
 
-        return ResultFactory.success(accessToken);
+        const accessToken = createAccessToken(payload);
+        const refreshToken = createRefreshToken(payload);
+
+        return ResultFactory.success({accessToken, refreshToken})
 
     } catch {
         return ResultFactory.failure("Refresh failed");
