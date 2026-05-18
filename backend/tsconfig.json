@@ -1,0 +1,8 @@
+{
+    "extends": "@tsconfig/node22/tsconfig.json",
+    "compilerOptions": {
+        "rootDir": "./src", // or whatever the folder should be called
+        "outDir": "./dist", // or whatever the folder should be called
+        "esModuleInterop": true
+    }
+}
