@@ -1,10 +1,10 @@
-import { BiDirectionalCompleteMap } from "./bidirectionalMap";
+import { ManyToManyRelation, OneToOneRelation } from "./relations";
 
 export class PendingBattleManager {
     private static instance: PendingBattleManager;
     
     // Challenger -> Defender (Only storing names)
-    private chalToDefMap = new BiDirectionalCompleteMap<string, string>()
+    private chalToDefMap = new ManyToManyRelation<string, string>()
 
     private constructor() {}
 
@@ -27,12 +27,37 @@ export class PendingBattleManager {
         this.chalToDefMap.getValuesFromKey(challenger)
     }
 
-    public withdrawChallenge(challenger: string, defender: string) {
+    // For accepting/withdrawing/reject from challenge
+    public resolveChallenger(challenger: string, defender: string) {
         this.chalToDefMap.deleteEntry(challenger, defender)
     }
 
-    public acceptChallenger(challenger: string, defender: string) {
-        this.chalToDefMap.cascadeDeleteKey(challenger)
-        this.chalToDefMap.cascadeDeleteKey(defender)
+    public disconnectPlayer(player: string) {
+        this.chalToDefMap.cascadeDeleteKey(player)
+        this.chalToDefMap.cascadeDeleteValue(player)
+    }
+}
+
+type Pair<T> = {
+    a: T,
+    b: T
+}
+
+export class RoomManager {
+    private static instance: RoomManager;
+    
+    private roomToPlayers = new OneToOneRelation<string, Pair<string>>()
+
+    private constructor() {}
+
+    public static getInstance(): RoomManager {
+        if (!RoomManager.instance) {
+            RoomManager.instance = new RoomManager();
+        }
+        return RoomManager.instance;
+    }
+
+    public set(roomid: string, playerA: string, playerB: string) {
+        this.roomToPlayers.set(roomid, {a: playerA, b: playerB})
     }
 }

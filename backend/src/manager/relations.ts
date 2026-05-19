@@ -1,6 +1,15 @@
 import ResultFactory, { Result } from "../types/result";
 
-export class BiDirectionalMap<K, V> {
+function asReadonlySet<T>(set: Set<T> | Result<Set<T>>): ReadonlySet<T> {
+    if ("ok" in set) {
+        if (set.ok)
+            return set.data as ReadonlySet<T>;
+        return new Set() as ReadonlySet<T>
+    }
+    return set as ReadonlySet<T>;
+}
+
+export class OneToOneRelation<K, V> {
     private forwardMap: Map<K, V> = new Map<K, V>();
     private backwardMap: Map<V, K> = new Map<V, K>();
 
@@ -29,7 +38,8 @@ export class BiDirectionalMap<K, V> {
         return ResultFactory.success(defaultValue);
     }
 
-    public deleteFromKey(key: K): Result<void> {
+    // Returns affected value for update purposes
+    public deleteFromKey(key: K): Result<V> {
         const value = this.forwardMap.get(key);
         if (value === undefined) {
             return ResultFactory.failure("Key doesn't exist");
@@ -38,10 +48,11 @@ export class BiDirectionalMap<K, V> {
         this.forwardMap.delete(key);
         this.backwardMap.delete(value);
 
-        return ResultFactory.success();
+        return ResultFactory.success(value);
     }
 
-    public deleteFromValue(value: V): Result<void> {
+    // Returns affected value for update purposes
+    public deleteFromValue(value: V): Result<K> {
         const key = this.backwardMap.get(value);
         if (key === undefined) {
             return ResultFactory.failure("Value doesn't exist");
@@ -50,7 +61,7 @@ export class BiDirectionalMap<K, V> {
         this.forwardMap.delete(key);
         this.backwardMap.delete(value);
 
-        return ResultFactory.success();
+        return ResultFactory.success(key);
     }
 
     public getKeyFromValue(value: V): Result<K> {
@@ -74,12 +85,12 @@ export class BiDirectionalMap<K, V> {
     }
 }
 
-export class BiDirectionalCompleteMap<K, V> {
-    private forwardMap: BiDirectionalMap<K, Set<V>> =
-        new BiDirectionalMap<K, Set<V>>();
+export class ManyToManyRelation<K, V> {
+    private forwardMap: OneToOneRelation<K, Set<V>> =
+        new OneToOneRelation<K, Set<V>>();
 
-    private backwardMap: BiDirectionalMap<V, Set<K>> =
-        new BiDirectionalMap<V, Set<K>>();
+    private backwardMap: OneToOneRelation<V, Set<K>> =
+        new OneToOneRelation<V, Set<K>>();
 
     public set(key: K, value: V, limit?: number): Result<void> {
         const forwardRes = this.forwardMap.getOrInsert(key, new Set<V>());
@@ -101,12 +112,18 @@ export class BiDirectionalCompleteMap<K, V> {
         return ResultFactory.success();
     }
 
-    public getKeysFromValue(value: V): Result<Set<K>> {
-        return this.backwardMap.getValueFromKey(value);
+    public getKeysFromValue(value: V): Result<ReadonlySet<K>> {
+        const res = this.backwardMap.getValueFromKey(value);
+        if (!res.ok) return res;
+
+        return ResultFactory.success(asReadonlySet(res.data));
     }
 
-    public getValuesFromKey(key: K): Result<Set<V>> {
-        return this.forwardMap.getValueFromKey(key);
+    public getValuesFromKey(key: K): Result<ReadonlySet<V>> {
+        const res = this.forwardMap.getValueFromKey(key);
+        if (!res.ok) return res;
+
+        return ResultFactory.success(asReadonlySet(res.data));
     }
 
     public deleteEntry(key: K, value: V): Result<void> {
@@ -125,7 +142,8 @@ export class BiDirectionalCompleteMap<K, V> {
         return ResultFactory.success();
     }
 
-    public cascadeDeleteKey(key: K): Result<void> {
+    // Returns affected value for update purposes
+    public cascadeDeleteKey(key: K): Result<ReadonlySet<V>> {
         const valuesRes = this.forwardMap.getValueFromKey(key);
         if (!valuesRes.ok) return valuesRes;
 
@@ -143,11 +161,11 @@ export class BiDirectionalCompleteMap<K, V> {
             }
         }
 
-        this.forwardMap.deleteFromKey(key);
-        return ResultFactory.success();
+        return ResultFactory.success(asReadonlySet(valuesRes));
     }
 
-    public cascadeDeleteValue(value: V): Result<void> {
+    // Returns affected value for update purposes
+    public cascadeDeleteValue(value: V): Result<ReadonlySet<K>> {
         const keysRes = this.backwardMap.getValueFromKey(value);
         if (!keysRes.ok) return keysRes;
 
@@ -165,7 +183,6 @@ export class BiDirectionalCompleteMap<K, V> {
             }
         }
 
-        this.backwardMap.deleteFromKey(value);
-        return ResultFactory.success();
+        return ResultFactory.success(asReadonlySet(keysRes));
     }
 }

@@ -1,9 +1,9 @@
-import { BiDirectionalMap } from "./bidirectionalMap";
+import { OneToOneRelation } from "./relations";
 
 export class UserManager {
     private static instance: UserManager;
 
-    private socketToUser = new BiDirectionalMap<string, string>()
+    private socketToUser = new OneToOneRelation<string, string>()
 
     private constructor() {}
 
@@ -26,7 +26,7 @@ export class UserManager {
         return this.socketToUser.getKeyFromValue(username);
     }
 
-    public removeUser(socketId: string) {
+    public disconnectPlayer(socketId: string) {
         this.socketToUser.deleteFromKey(socketId)
     }
 }

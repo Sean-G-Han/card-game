@@ -3,6 +3,8 @@
     "compilerOptions": {
         "rootDir": "./src", // or whatever the folder should be called
         "outDir": "./dist", // or whatever the folder should be called
-        "esModuleInterop": true
-    }
+        "esModuleInterop": true,
+        "types": ["jest", "node"]
+    },
+    "include": ["src", "**/*.test.ts"]
 }
