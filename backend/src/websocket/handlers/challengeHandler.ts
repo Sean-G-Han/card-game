@@ -1,9 +1,9 @@
 import { Socket, Server } from "socket.io";
-import { UserManager } from "../manager/userManager";
-import { User } from "../types/user";
-import { PendingBattleManager } from "../manager/battleManager";
+import { UserManager } from "../../manager/userManager";
+import { User } from "../../types/user";
+import { PendingBattleManager } from "../../manager/battleManager";
 
-export function registerUserSockets(socket: Socket, io: Server) {
+export function registerChallengeHandler(socket: Socket, io: Server) {
     const userManager = UserManager.getInstance()
     const pendingManager = PendingBattleManager.getInstance()
     const user: User = socket.data.user

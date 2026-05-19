@@ -5,9 +5,10 @@ import { User } from "./types/user"
 import ResultFactory, { Result } from "./types/result"
 import { AccessTokenPayload, RefreshTokenPayload, TokenPair } from "./types/auth";
 import { Response } from "express";
+import { ENV } from "./config/env";
 
-const JWT_SECRET = process.env.JWT_SECRET!;
-const JWT_SECRET2 = process.env.JWT_SECRET2!;
+const ACCESS_TOKEN_SECRET = ENV.ACCESS_TOKEN_SECRET
+const REFRESH_TOKEN_SECRET = ENV.REFRESH_TOKEN_SECRET
 
 export async function register(username: string, password: string): Promise<Result<TokenPair>> {
     // TODO: (Priority: Medium) Consider creating a wrapper function for this try catch
@@ -82,7 +83,7 @@ export async function refresh(token: string | undefined): Promise<Result<TokenPa
     try {
         const result = jwt.verify(
             token,
-            JWT_SECRET2
+            REFRESH_TOKEN_SECRET
         ) as {id: string};
         
         const res = await pool.query(
@@ -123,9 +124,9 @@ export function assignRefresh(res: Response, refreshToken: string) {
 }
 
 function createAccessToken(user: AccessTokenPayload): string {
-    return jwt.sign(user, JWT_SECRET, { expiresIn: "1h" })
+    return jwt.sign(user, ACCESS_TOKEN_SECRET, { expiresIn: "1h" })
 }
 
 function createRefreshToken(userId: RefreshTokenPayload): string {
-    return jwt.sign(userId, JWT_SECRET2, { expiresIn: "7d" })
+    return jwt.sign(userId, REFRESH_TOKEN_SECRET, { expiresIn: "7d" })
 }
