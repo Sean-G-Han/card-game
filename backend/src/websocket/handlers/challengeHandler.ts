@@ -33,6 +33,13 @@ export function registerChallengeHandler(socket: Socket, io: Server) {
         if (!opponentResult.ok || !userResult.ok) {
             socket.emit("challenge-error", "Opponent not online");
             return;
+        }        
+
+        const challengers = pendingManager.getChallengers(userName)
+
+        if (!challengers.ok || !challengers.data.has(opponentName)) {
+            socket.emit("challenge-error", "Opponent has withdrew challenge");
+            return;
         }
 
         pendingManager.resolveChallenger(opponentResult.data, userResult.data)

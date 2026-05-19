@@ -1,3 +1,4 @@
+import ResultFactory, { Result } from "../types/result";
 import { ManyToManyRelation, OneToOneRelation } from "./relations";
 
 export class PendingBattleManager {
@@ -15,26 +16,29 @@ export class PendingBattleManager {
         return PendingBattleManager.instance;
     }
 
-    public set(challenger: string, defender: string) {
-        this.chalToDefMap.set(challenger, defender);
+    public set(challenger: string, defender: string): Result<void> {
+        return this.chalToDefMap.set(challenger, defender);
     }
 
-    public getChallengers(defender: string) {
-        this.chalToDefMap.getKeysFromValue(defender)
+    public getChallengers(defender: string): Result<ReadonlySet<string>> {
+        return this.chalToDefMap.getKeysFromValue(defender)
     }
 
-    public getDefenders(challenger: string) {
-        this.chalToDefMap.getValuesFromKey(challenger)
+    public getDefenders(challenger: string): Result<ReadonlySet<string>> {
+        return this.chalToDefMap.getValuesFromKey(challenger)
     }
 
     // For accepting/withdrawing/reject from challenge
-    public resolveChallenger(challenger: string, defender: string) {
-        this.chalToDefMap.deleteEntry(challenger, defender)
+    public resolveChallenger(challenger: string, defender: string): Result<void> {
+        return this.chalToDefMap.deleteEntry(challenger, defender)
     }
 
-    public disconnectPlayer(player: string) {
-        this.chalToDefMap.cascadeDeleteKey(player)
-        this.chalToDefMap.cascadeDeleteValue(player)
+    public disconnectPlayer(player: string): Result<ReadonlySet<string>> {
+        const result1 = this.chalToDefMap.cascadeDeleteKey(player)
+        const result2 = this.chalToDefMap.cascadeDeleteValue(player)
+        const playersChallenged = result1.ok ? result1.data : new Set()
+        const playersChallenging = result2.ok ? result2.data : new Set()
+        return ResultFactory.success(playersChallenged.union(playersChallenging) as ReadonlySet<string>)
     }
 }
 
