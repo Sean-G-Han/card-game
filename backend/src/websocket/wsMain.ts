@@ -6,7 +6,8 @@ import { handleConnection } from "./handlers/connectionHandler";
 export function createSocketServer(server: http.Server) {
     const io = new Server(server, {
         cors: {
-            origin: "*"
+            origin: "http://localhost:5173",
+            credentials: true
         }
     });
 

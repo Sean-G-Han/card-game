@@ -25,5 +25,15 @@ services:
       REFRESH_TOKEN_SECRET: supersecret2
       PORT: 3000
 
+  frontend:
+    build: ./frontend
+    container_name: react_frontend #YH Note we dont need restart yet as if client fails I want to know why
+    ports:
+    - "5173:5173"
+    depends_on:
+      - backend
+    environment:
+      SERVER_URL: http://backend:3000
+
 volumes:
   pgdata:
