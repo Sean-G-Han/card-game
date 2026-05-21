@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ENV } from "../../config/env";
+import apiFetch from "../types/api";
 
 export default function AuthPage() {
     const [username, setUsername] = useState("");
@@ -7,15 +7,7 @@ export default function AuthPage() {
     const [accessToken, setAccessToken] = useState("");
 
     async function login() {
-        const res = await fetch(`${ENV.SERVER_URL}/login`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            credentials: "include", // IMPORTANT for refresh token cookie
-            body: JSON.stringify({ username, password })
-        });
-
+        const res = await apiFetch("POST", "login", { username, password })
         const data = await res.json();
 
         if (data.accessToken) {
@@ -26,15 +18,7 @@ export default function AuthPage() {
     }
 
     async function register() {
-        const res = await fetch(`${ENV.SERVER_URL}/register`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            credentials: "include",
-            body: JSON.stringify({ username, password })
-        });
-
+        const res = await apiFetch("POST", "register", { username, password })
         const data = await res.json();
 
         if (data.accessToken) {
@@ -46,11 +30,7 @@ export default function AuthPage() {
 
     useEffect(() => {
         async function refresh() {
-            const res = await fetch(`${ENV.SERVER_URL}/refresh`, {
-                method: "POST",
-                credentials: "include"
-            });
-
+            const res = await apiFetch("POST", "refresh")
             const data = await res.json();
 
             if (data.accessToken) {

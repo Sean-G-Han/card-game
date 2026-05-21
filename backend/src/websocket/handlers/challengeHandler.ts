@@ -13,14 +13,14 @@ export function registerChallengeHandler(socket: Socket, io: Server) {
         const userResult = userManager.getSocketId(userName)
         const opponentResult = userManager.getSocketId(opponentName)
 
-        if (!opponentResult.ok || !userResult.ok) {
+        if (!opponentResult.isOk() || !userResult.isOk()) {
             socket.emit("challenge-error", "Opponent not online");
             return;
         }
 
-        pendingManager.set(userResult.data, opponentResult.data)
+        pendingManager.set(userResult.unwrap(), opponentResult.unwrap())
 
-        io.to(opponentResult.data).emit("challenge-request", {
+        io.to(opponentResult.unwrap()).emit("challenge-request", {
             from: userName
         });
     });
@@ -30,18 +30,18 @@ export function registerChallengeHandler(socket: Socket, io: Server) {
         const userResult = userManager.getSocketId(userName)
         const opponentResult = userManager.getSocketId(opponentName)
 
-        if (!opponentResult.ok || !userResult.ok) {
+        if (!opponentResult.isOk() || !userResult.isOk()) {
             socket.emit("challenge-error", "Opponent not online");
             return;
         }        
 
         const challengers = pendingManager.getChallengers(userName)
 
-        if (!challengers.ok || !challengers.data.has(opponentName)) {
+        if (!challengers.isOk() || !challengers.unwrap().has(opponentName)) {
             socket.emit("challenge-error", "Opponent has withdrew challenge");
             return;
         }
 
-        pendingManager.resolveChallenger(opponentResult.data, userResult.data)
+        pendingManager.resolveChallenger(opponentResult.unwrap(), userResult.unwrap())
     });
 }

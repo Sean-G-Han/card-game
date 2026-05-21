@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { pool } from "./db/db";
 import { User } from "./types/user"
-import ResultFactory, { Result } from "./types/result"
+import { Result } from "./types/result"
 import { AccessTokenPayload, RefreshTokenPayload, TokenPair } from "./types/auth";
 import { Response } from "express";
 import { ENV } from "./config/env";
@@ -30,13 +30,13 @@ export async function register(username: string, password: string): Promise<Resu
         const refreshToken = createRefreshToken(payload); 
         // YH Notes: Refresh token should have less info incase stolen
 
-        return ResultFactory.success({accessToken, refreshToken})
+        return Result.success({accessToken, refreshToken})
 
     } catch (err: any) {
         if (err.code === "23505") { // YH Notes: Postgres unique violation
-            return ResultFactory.failure("Username already exists");
+            return Result.failure("Username already exists");
         }
-        return ResultFactory.failure("Failed to register user");
+        return Result.failure("Failed to register user");
     }
 }
 
@@ -51,7 +51,7 @@ export async function login(username: string, password: string): Promise<Result<
         const user = res.rows[0];
 
         if (!user) {
-            return ResultFactory.failure("Invalid username/password");
+            return Result.failure("Invalid username/password");
         }
 
         const valid = await bcrypt.compare(
@@ -60,7 +60,7 @@ export async function login(username: string, password: string): Promise<Result<
         );
 
         if (!valid) {
-            return ResultFactory.failure("Invalid username/password");
+            return Result.failure("Invalid username/password");
         }
 
         const payload: User = {
@@ -71,15 +71,15 @@ export async function login(username: string, password: string): Promise<Result<
         const accessToken = createAccessToken(payload);
         const refreshToken = createRefreshToken(payload);
 
-        return ResultFactory.success({accessToken, refreshToken})
+        return Result.success({accessToken, refreshToken})
 
     } catch (err) {
-        return ResultFactory.failure("Failed to login user");
+        return Result.failure("Failed to login user");
     }
 }
 
 export async function refresh(token: string | undefined): Promise<Result<TokenPair>> {
-    if (!token) return ResultFactory.failure("No Refresh Token")
+    if (!token) return Result.failure("No Refresh Token")
     try {
         const result = jwt.verify(
             token,
@@ -96,7 +96,7 @@ export async function refresh(token: string | undefined): Promise<Result<TokenPa
         const user = res.rows[0];
 
         if (!user) {
-            return ResultFactory.failure("User not found");
+            return Result.failure("User not found");
         }
 
         const payload: User = {
@@ -107,10 +107,10 @@ export async function refresh(token: string | undefined): Promise<Result<TokenPa
         const accessToken = createAccessToken(payload);
         const refreshToken = createRefreshToken(payload);
 
-        return ResultFactory.success({accessToken, refreshToken})
+        return Result.success({accessToken, refreshToken})
 
     } catch {
-        return ResultFactory.failure("Refresh failed");
+        return Result.failure("Refresh failed");
     }
 }
 

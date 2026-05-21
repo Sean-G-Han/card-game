@@ -1,188 +1,158 @@
-import ResultFactory, { Result } from "../types/result";
+import { Result } from "../types/result";
 
-function asReadonlySet<T>(set: Set<T> | Result<Set<T>>): ReadonlySet<T> {
-    if ("ok" in set) {
-        if (set.ok)
-            return set.data as ReadonlySet<T>;
-        return new Set() as ReadonlySet<T>
-    }
-    return set as ReadonlySet<T>;
+
+function asReadonlySet<T>(set: Set<T>): ReadonlySet<T> {
+    return set as ReadonlySet<T>
 }
 
 export class OneToOneRelation<K, V> {
-    private forwardMap: Map<K, V> = new Map<K, V>();
-    private backwardMap: Map<V, K> = new Map<V, K>();
+    private forwardMap = new Map<K, V>()
+    private backwardMap = new Map<V, K>()
 
     public set(key: K, value: V): Result<void> {
-        this.forwardMap.set(key, value);
-        this.backwardMap.set(value, key);
-        return ResultFactory.success();
+        this.forwardMap.set(key, value)
+        this.backwardMap.set(value, key)
+        return Result.success(undefined)
     }
 
     public get(key: K): Result<V> {
-        const value = this.forwardMap.get(key);
-        if (value === undefined) {
-            return ResultFactory.failure("Key doesn't exist");
-        }
-        return ResultFactory.success(value);
+        return Result
+            .success(this.forwardMap.get(key))
+            .filter<V>(
+                (v) => v !== undefined,
+                "Key doesn't exist"
+            )
     }
 
     public getOrInsert(key: K, defaultValue: V): Result<V> {
-        const existing = this.forwardMap.get(key);
-        if (existing !== undefined) {
-            return ResultFactory.success(existing);
-        }
-
-        this.forwardMap.set(key, defaultValue);
-        this.backwardMap.set(defaultValue, key);
-        return ResultFactory.success(defaultValue);
+        return this.get(key).orElse(() => {
+            this.forwardMap.set(key, defaultValue)
+            this.backwardMap.set(defaultValue, key)
+            return Result.success(defaultValue)
+        })
     }
 
-    // Returns affected value for update purposes
     public deleteFromKey(key: K): Result<V> {
-        const value = this.forwardMap.get(key);
-        if (value === undefined) {
-            return ResultFactory.failure("Key doesn't exist");
-        }
-
-        this.forwardMap.delete(key);
-        this.backwardMap.delete(value);
-
-        return ResultFactory.success(value);
+        return this.get(key).map(v => {
+            this.forwardMap.delete(key)
+            this.backwardMap.delete(v)
+            return v
+        })
     }
 
-    // Returns affected value for update purposes
     public deleteFromValue(value: V): Result<K> {
-        const key = this.backwardMap.get(value);
-        if (key === undefined) {
-            return ResultFactory.failure("Value doesn't exist");
-        }
+        const key = this.backwardMap.get(value)
 
-        this.forwardMap.delete(key);
-        this.backwardMap.delete(value);
-
-        return ResultFactory.success(key);
+        return key === undefined
+            ? Result.failure("Value doesn't exist")
+            : Result.success(key).map(k => {
+                this.forwardMap.delete(k)
+                this.backwardMap.delete(value)
+                return k
+            })
     }
 
     public getKeyFromValue(value: V): Result<K> {
-        const key = this.backwardMap.get(value);
-        if (key === undefined) {
-            return ResultFactory.failure("Value doesn't exist");
-        }
-        return ResultFactory.success(key);
+        const key = this.backwardMap.get(value)
+
+        return key === undefined
+            ? Result.failure("Value doesn't exist")
+            : Result.success(key)
     }
 
     public getValueFromKey(key: K): Result<V> {
-        const value = this.forwardMap.get(key);
-        if (value === undefined) {
-            return ResultFactory.failure("Key doesn't exist");
-        }
-        return ResultFactory.success(value);
+        return this.get(key)
     }
 
     public size(): number {
-        return this.forwardMap.size;
+        return this.forwardMap.size
     }
 }
 
 export class ManyToManyRelation<K, V> {
-    private forwardMap: OneToOneRelation<K, Set<V>> =
-        new OneToOneRelation<K, Set<V>>();
-
-    private backwardMap: OneToOneRelation<V, Set<K>> =
-        new OneToOneRelation<V, Set<K>>();
+    private forwardMap = new OneToOneRelation<K, Set<V>>()
+    private backwardMap = new OneToOneRelation<V, Set<K>>()
 
     public set(key: K, value: V, limit?: number): Result<void> {
-        const forwardRes = this.forwardMap.getOrInsert(key, new Set<V>());
-        if (!forwardRes.ok) return forwardRes; // this is a failure object
+        return this.forwardMap
+            .getOrInsert(key, new Set<V>())
+            .flatMap(forwardSet => {
+                if (limit !== undefined && forwardSet.size >= limit) {
+                    return Result.failure("Limit reached for key")
+                }
 
-        const backwardRes = this.backwardMap.getOrInsert(value, new Set<K>());
-        if (!backwardRes.ok) return backwardRes;
-
-        const forwardSet = forwardRes.data;
-        const backwardSet = backwardRes.data;
-
-        if (limit !== undefined && forwardSet.size >= limit) {
-            return ResultFactory.failure("Limit reached for key");
-        }
-
-        forwardSet.add(value);
-        backwardSet.add(key);
-
-        return ResultFactory.success();
+                return this.backwardMap
+                    .getOrInsert(value, new Set<K>())
+                    .map(backwardSet => {
+                        forwardSet.add(value)
+                        backwardSet.add(key)
+                    })
+            })
     }
 
     public getKeysFromValue(value: V): Result<ReadonlySet<K>> {
-        const res = this.backwardMap.getValueFromKey(value);
-        if (!res.ok) return res;
-
-        return ResultFactory.success(asReadonlySet(res.data));
+        return this.backwardMap
+            .getValueFromKey(value)
+            .map(asReadonlySet)
     }
 
     public getValuesFromKey(key: K): Result<ReadonlySet<V>> {
-        const res = this.forwardMap.getValueFromKey(key);
-        if (!res.ok) return res;
-
-        return ResultFactory.success(asReadonlySet(res.data));
+        return this.forwardMap
+            .getValueFromKey(key)
+            .map(asReadonlySet)
     }
 
     public deleteEntry(key: K, value: V): Result<void> {
-        const forwardRes = this.forwardMap.getValueFromKey(key);
-        if (!forwardRes.ok) return forwardRes;
+        return this.forwardMap
+            .getValueFromKey(key)
+            .flatMap(set => {
+                set.delete(value)
 
-        const set = forwardRes.data;
-        set.delete(value);
-
-        const backwardRes = this.backwardMap.getValueFromKey(value);
-        if (!backwardRes.ok) return backwardRes;
-
-        const backSet = backwardRes.data;
-        backSet.delete(key);
-
-        return ResultFactory.success();
+                return this.backwardMap
+                    .getValueFromKey(value)
+                    .map(backSet => {
+                        backSet.delete(key)
+                    })
+            })
     }
 
-    // Returns affected value for update purposes
     public cascadeDeleteKey(key: K): Result<ReadonlySet<V>> {
-        const valuesRes = this.forwardMap.getValueFromKey(key);
-        if (!valuesRes.ok) return valuesRes;
+        return this.forwardMap
+            .getValueFromKey(key)
+            .map(values => {
+                for (const value of values) {
+                    this.backwardMap
+                        .getValueFromKey(value)
+                        .tap(keys => {
+                            keys.delete(key)
 
-        const values = valuesRes.data;
+                            if (keys.size === 0) {
+                                this.backwardMap.deleteFromKey(value)
+                            }
+                        })
+                }
 
-        for (const value of values) {
-            const keysRes = this.backwardMap.getValueFromKey(value);
-            if (!keysRes.ok) continue;
-
-            const keys = keysRes.data;
-            keys.delete(key);
-
-            if (keys.size === 0) {
-                this.backwardMap.deleteFromKey(value);
-            }
-        }
-
-        return ResultFactory.success(asReadonlySet(valuesRes));
+                return asReadonlySet(values)
+            })
     }
 
-    // Returns affected value for update purposes
     public cascadeDeleteValue(value: V): Result<ReadonlySet<K>> {
-        const keysRes = this.backwardMap.getValueFromKey(value);
-        if (!keysRes.ok) return keysRes;
+        return this.backwardMap
+            .getValueFromKey(value)
+            .map(keys => {
+                for (const key of keys) {
+                    this.forwardMap
+                        .getValueFromKey(key)
+                        .tap(values => {
+                            values.delete(value)
 
-        const keys = keysRes.data;
+                            if (values.size === 0) {
+                                this.forwardMap.deleteFromKey(key)
+                            }
+                        })
+                }
 
-        for (const key of keys) {
-            const valuesRes = this.forwardMap.getValueFromKey(key);
-            if (!valuesRes.ok) continue;
-
-            const values = valuesRes.data;
-            values.delete(value);
-
-            if (values.size === 0) {
-                this.forwardMap.deleteFromKey(key);
-            }
-        }
-
-        return ResultFactory.success(asReadonlySet(keysRes));
+                return asReadonlySet(keys)
+            })
     }
 }

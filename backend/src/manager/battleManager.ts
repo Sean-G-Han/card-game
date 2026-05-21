@@ -1,4 +1,4 @@
-import ResultFactory, { Result } from "../types/result";
+import { Result } from "../types/result";
 import { ManyToManyRelation, OneToOneRelation } from "./relations";
 
 export class PendingBattleManager {
@@ -36,9 +36,9 @@ export class PendingBattleManager {
     public disconnectPlayer(player: string): Result<ReadonlySet<string>> {
         const result1 = this.chalToDefMap.cascadeDeleteKey(player)
         const result2 = this.chalToDefMap.cascadeDeleteValue(player)
-        const playersChallenged = result1.ok ? result1.data : new Set()
-        const playersChallenging = result2.ok ? result2.data : new Set()
-        return ResultFactory.success(playersChallenged.union(playersChallenging) as ReadonlySet<string>)
+        const playersChallenged = result1.getElse(new Set())
+        const playersChallenging = result2.getElse(new Set())
+        return Result.success(playersChallenged.union(playersChallenging) as ReadonlySet<string>)
     }
 }
 
