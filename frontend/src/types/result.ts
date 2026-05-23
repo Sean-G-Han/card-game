@@ -28,6 +28,10 @@ export class Result<T> {
         return this.result.ok
     }
 
+    /**
+     * Please try to avoid this function.
+     * Basically like "get()" where it will also throw an error
+     */
     unwrap(): T {
         if (this.result.ok) {
             return this.result.data
@@ -42,15 +46,13 @@ export class Result<T> {
         return defaultValue
     }
 
-    orElse(func: (err: string) => Result<T>): Result<T> {
-        if (this.result.ok) {
-            return this
-        }
-        return func(this.result.error)
-    }
-
     tap(fn: (v: T) => void): Result<T> {
         if (this.result.ok) fn(this.result.data)
+        return this
+    }
+
+    tapError(fn: (e: string) => void): Result<T> {
+        if (!this.result.ok) fn(this.result.error)
         return this
     }
 
@@ -61,11 +63,25 @@ export class Result<T> {
         return Result.failure(this.result.error)
     }
 
+    mapError(func: (e: string) => T): Result<T> {
+        if (!this.result.ok) {
+            return Result.success(func(this.result.error))
+        }
+        return this
+    }
+
     flatMap<OutputType>(func: (v: T) => Result<OutputType>): Result<OutputType> {
         if (this.result.ok) {
             return func(this.result.data)
         }
         return Result.failure(this.result.error)
+    }
+
+    flatMapError(func: (e: string) => Result<T>): Result<T> {
+        if (!this.result.ok) {
+            return func(this.result.error)
+        }
+        return this
     }
 
     filter(pred: (v: T) => boolean, error: string): Result<T>

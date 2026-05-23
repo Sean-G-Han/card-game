@@ -1,34 +1,46 @@
 import express, { Response } from "express";
 import dotenv from "dotenv";
 import { assignRefresh, login, refresh, register } from "../auth";
+import { pool } from "../db/db";
+import { Result } from "../types/result";
+import { TokenPair } from "../types/auth";
 
 dotenv.config();
 
 const router = express.Router();
 
-function handleAuthResponse(res: Response, result: any) {
-    if (!result.ok) {
-        return res.status(400).json({ error: result.error });
-    }
-    const { accessToken, refreshToken } = result.data;
-    assignRefresh(res, refreshToken);
-    return res.json({ accessToken });
+function handleAuthResponse(res: Response, result: Result<TokenPair>)  {
+    result.tap((pair) => {
+        const { accessToken, refreshToken } = pair
+        assignRefresh(res, refreshToken);
+        res.json({accessToken});
+    }).tapError((e) => {
+        res.status(400).json(e);
+    })
 }
 
 router.post("/register", async (req, res) => {
+    console.log(`Trying to register with ${req.body.username}, ${req.body.password}`)
     const result = await register(req.body.username, req.body.password);
-    return handleAuthResponse(res, result);
+    handleAuthResponse(res, result);
 });
 
 router.post("/login", async (req, res) => {
     const result = await login(req.body.username, req.body.password);
-    return handleAuthResponse(res, result);
+    handleAuthResponse(res, result);
 });
 
 router.post("/refresh", async (req, res) => {
     const token = req.cookies.refreshToken as string | undefined;
     const result = await refresh(token);
-    return handleAuthResponse(res, result);
+    handleAuthResponse(res, result);
+});
+
+router.get("/users", async (req, res) => {
+    const users = await pool.query(
+        `SELECT username FROM users`
+    );
+    res.status(200).json({users: users.rows[0]})
 });
 
 export default router

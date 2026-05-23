@@ -25,10 +25,10 @@ export class OneToOneRelation<K, V> {
     }
 
     public getOrInsert(key: K, defaultValue: V): Result<V> {
-        return this.get(key).orElse(() => {
+        return this.get(key).mapError((e) => {
             this.forwardMap.set(key, defaultValue)
             this.backwardMap.set(defaultValue, key)
-            return Result.success(defaultValue)
+            return defaultValue
         })
     }
 
