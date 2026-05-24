@@ -1,6 +1,7 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import authRoutes from "./routes/authRoutes";
+import userRoutes from "./routes/userRoutes"
 import cors from "cors";
 
 export function createApp() {
@@ -15,6 +16,7 @@ export function createApp() {
     }));
 
     app.use("/", authRoutes);
+    app.use("/users", userRoutes)
 
     return app;
 }

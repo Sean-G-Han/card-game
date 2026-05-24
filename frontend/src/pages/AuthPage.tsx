@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import apiFetch from "../types/api";
+import { UserContext, type UserContextType } from "../context/UserContext";
 
 type LoginCred = {
     username: string,
@@ -13,12 +14,14 @@ type AuthResponse = {
 export default function AuthPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
-    const [accessToken, setAccessToken] = useState("");
-    //000 To change. Response is now in result format
+    const {user, setUser} = useContext<UserContextType>(UserContext)
+
     async function login() {
         const res = await apiFetch<LoginCred, AuthResponse>("POST", "login", { username, password })
         res.tap((tokens) => {
-            setAccessToken(tokens.accessToken)
+            setUser({
+                accessToken: tokens.accessToken
+            })
         }).tapError((e) => {
             alert(e || "Login Fail")
         })
@@ -27,7 +30,9 @@ export default function AuthPage() {
     async function register() {
         const res = await apiFetch<LoginCred, AuthResponse>("POST", "register", { username, password })
         res.tap((tokens) => {
-            setAccessToken(tokens.accessToken)
+            setUser({
+                accessToken: tokens.accessToken
+            })
         }).tapError((e) => {
             alert(e || "Login Fail")
         })
@@ -37,12 +42,14 @@ export default function AuthPage() {
         async function refresh() {
             const res = await apiFetch<void, AuthResponse>("POST", "refresh")
             res.tap((tokens) => {
-                setAccessToken(tokens.accessToken)
+                setUser({
+                    accessToken: tokens.accessToken
+                })
             })
         }
         
         refresh();
-    }, []);
+    }, [user, setUser]);
 
     return (
         <div style={{ padding: 20 }}>
@@ -71,7 +78,7 @@ export default function AuthPage() {
             <hr />
 
             <h3>Access Token</h3>
-            <pre>{accessToken}</pre>
+            <pre>{user.accessToken}</pre>
         </div>
     );
 }

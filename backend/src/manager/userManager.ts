@@ -30,4 +30,10 @@ export class UserManager {
     public disconnectPlayer(socketId: string): Result<string>  {
         return this.socketToUser.deleteFromKey(socketId)
     }
+
+    public getAllActiveUsers(): Result<string[]> {
+        return this.socketToUser.entries().map(entries =>
+            Array.from(entries).map(([_, value]) => value)
+        );
+    }
 }

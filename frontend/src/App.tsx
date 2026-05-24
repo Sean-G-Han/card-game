@@ -1,9 +1,10 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import AuthPage from "./pages/AuthPage";
+import UserProvider from "./context/UserContext";
 
 function App() {
     return (
-        <>
+        <UserProvider>
             <h1>TEST</h1>
             <Router>
                 <div className="d-flex flex-column vh-100">
@@ -14,7 +15,7 @@ function App() {
                     </div>
                 </div>
             </Router>
-        </>
+        </UserProvider>
     );
 }
 

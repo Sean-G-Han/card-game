@@ -1,7 +1,6 @@
 import express, { Response } from "express";
 import dotenv from "dotenv";
 import { assignRefresh, login, refresh, register } from "../auth";
-import { pool } from "../db/db";
 import { Result } from "../types/result";
 import { TokenPair } from "../types/auth";
 
@@ -34,13 +33,6 @@ router.post("/refresh", async (req, res) => {
     const token = req.cookies.refreshToken as string | undefined;
     const result = await refresh(token);
     handleAuthResponse(res, result);
-});
-
-router.get("/users", async (req, res) => {
-    const users = await pool.query(
-        `SELECT username FROM users`
-    );
-    res.status(200).json({users: users.rows[0]})
 });
 
 export default router

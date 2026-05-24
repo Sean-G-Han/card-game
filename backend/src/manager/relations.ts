@@ -9,7 +9,12 @@ export class OneToOneRelation<K, V> {
     private forwardMap = new Map<K, V>()
     private backwardMap = new Map<V, K>()
 
+    public entries(): Result<IterableIterator<[K, V]>> {
+        return Result.success(this.forwardMap.entries());
+    }
+
     public set(key: K, value: V): Result<void> {
+        this.forwardMap.entries()
         this.forwardMap.set(key, value)
         this.backwardMap.set(value, key)
         return Result.success(undefined)
@@ -72,6 +77,10 @@ export class OneToOneRelation<K, V> {
 export class ManyToManyRelation<K, V> {
     private forwardMap = new OneToOneRelation<K, Set<V>>()
     private backwardMap = new OneToOneRelation<V, Set<K>>()
+
+    public entries(): Result<IterableIterator<[K, Set<V>]>> {
+        return this.forwardMap.entries();
+    }
 
     public set(key: K, value: V, limit?: number): Result<void> {
         return this.forwardMap
